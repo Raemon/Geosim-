@@ -10,7 +10,7 @@ export interface CollapsedSystem {
 }
 
 const STAR_FORMATION_EFFICIENCY = 0.3;
-const DISK_MASS_FRACTION_OF_STAR = 0.08;
+const DISK_MASS_FRACTION_OF_STAR = 0.02;
 const DISK_LIFETIME_RANGE_MYR = [3, 10] as const;
 
 export function collapseCloud(cloud: MolecularCloud, seed: number): CollapsedSystem {

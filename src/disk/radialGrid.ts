@@ -6,7 +6,7 @@ export interface RadialGrid {
   annulusAreaAu2: Float64Array;
 }
 
-const INNERMOST_RADIUS_AU = 0.08;
+const INNERMOST_RADIUS_AU = 0.1;
 
 export function logarithmicRadialGrid(outerRadiusAu: number, cellCount: number): RadialGrid {
   const edges = logarithmicEdges(INNERMOST_RADIUS_AU, outerRadiusAu, cellCount);
