@@ -11,7 +11,7 @@ import {
   type SpeciesAmounts,
 } from './condensateSpecies';
 
-const SERPENTINE_SHARE_OF_MAGNESIUM = 0.08;
+const SERPENTINE_SHARE_OF_MAGNESIUM = 0.02;
 const ORGANIC_SHARE_OF_CARBON = 0.5;
 const CARBON_MONOXIDE_SHARE_OF_REMAINING_CARBON = 0.5;
 
