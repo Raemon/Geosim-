@@ -27,6 +27,7 @@ export function newPlanetSurface(
     crust,
     plateOf: assignPlates(grid, plateCount, random),
     poles: randomEulerPoles(plateCount, random),
+    pendingRotationRad: new Float64Array(plateCount),
     planetRadiusM: planet.radiusM,
     waterMassKg: planet.volatiles.waterMassKg,
     carbonDioxideMassKg: planet.volatiles.carbonDioxideMassKg,

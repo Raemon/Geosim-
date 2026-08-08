@@ -9,6 +9,7 @@ import { plateVelocityMPerMyr } from '../tectonics/plateVelocity';
 import { seaLevelForWaterVolume } from '../tectonics/seaLevel';
 import { subductAndBuildArcs } from '../tectonics/subductAndArc';
 import type { SphereGrid } from '../sphere/sphereGrid';
+import { meanCellSpacingM } from '../sphere/cellSpacing';
 import { streamFor } from '../random/mulberry32';
 import { assignPlates } from '../tectonics/plateSeeds';
 import { randomEulerPoles } from '../tectonics/eulerPole';
@@ -19,6 +20,7 @@ export interface PlanetSurface {
   crust: CrustState;
   plateOf: Int32Array;
   poles: EulerPoles;
+  pendingRotationRad: Float64Array;
   planetRadiusM: number;
   waterMassKg: number;
   carbonDioxideMassKg: number;
@@ -34,8 +36,10 @@ export const STEP_MYR = 5;
 export const PLATE_REORGANISATION_INTERVAL_MYR = 400;
 
 export function stepPlanet(surface: PlanetSurface): PlanetSurface {
-  const moved = advectPlates(surface.grid, surface.crust, surface.plateOf, surface.poles, STEP_MYR);
-  const next: PlanetSurface = { ...surface, crust: moved.crust, plateOf: moved.plateOf };
+  const moved = advectPlates(
+    surface.grid, surface.crust, surface.plateOf, surface.poles, surface.pendingRotationRad, STEP_MYR,
+  );
+  const next: PlanetSurface = { ...surface, crust: moved };
   reworkCrustAtBoundaries(next);
   ageCrust(next);
   const aged = surface.ageMyr + STEP_MYR;
@@ -53,6 +57,7 @@ function reorganisedIfDue(surface: PlanetSurface, ageMyr: number): PlanetSurface
     ...surface,
     plateOf: assignPlates(surface.grid, plateCount, random),
     poles: randomEulerPoles(plateCount, random),
+    pendingRotationRad: new Float64Array(plateCount),
   };
 }
 
@@ -64,7 +69,8 @@ function reworkCrustAtBoundaries(surface: PlanetSurface): void {
     surface.planetRadiusM,
   );
   const boundaries = classifyBoundaries(surface.grid, surface.plateOf, velocity);
-  accreteAtRidges(surface.grid, surface.crust, boundaries);
+  const spacing = meanCellSpacingM(surface.grid, surface.planetRadiusM);
+  accreteAtRidges(surface.grid, surface.crust, boundaries, STEP_MYR, spacing);
   subductAndBuildArcs(
     surface.grid,
     surface.crust,
@@ -72,6 +78,7 @@ function reworkCrustAtBoundaries(surface: PlanetSurface): void {
     surface.plateOf,
     STEP_MYR,
     surface.mantleVigourAt(surface.ageMyr),
+    spacing,
   );
 }
 

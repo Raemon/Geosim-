@@ -2,31 +2,91 @@ import { MAX_NEIGHBOURS, type SphereGrid } from '../sphere/sphereGrid';
 import type { CrustState } from './crustState';
 import type { EulerPoles } from './eulerPole';
 
+type UnitVector = readonly [number, number, number];
+
 export function advectPlates(
   grid: SphereGrid,
   crust: CrustState,
   plateOf: Int32Array,
   poles: EulerPoles,
+  pendingRotationRad: Float64Array,
   stepMyr: number,
-): { crust: CrustState; plateOf: Int32Array } {
-  const source = new Int32Array(grid.cellCount);
+): CrustState {
+  const spacingRad = Math.sqrt((4 * Math.PI) / grid.cellCount);
+  const moving = accumulateUntilAWholeCell(poles, pendingRotationRad, stepMyr, spacingRad);
+  if (!moving.some((angle) => angle !== 0)) return crust;
+  const sampled = emptyCrust(grid);
   for (let cell = 0; cell < grid.cellCount; cell++) {
-    source[cell] = cellUpstreamOf(grid, plateOf, poles, stepMyr, cell);
+    sampleUpstreamInto(sampled, grid, crust, plateOf, poles, moving, cell);
   }
-  return { crust: crustSampledFrom(grid, crust, source), plateOf: sampledInts(plateOf, source) };
+  return sampled;
 }
 
-function cellUpstreamOf(
+function accumulateUntilAWholeCell(
+  poles: EulerPoles,
+  pendingRotationRad: Float64Array,
+  stepMyr: number,
+  spacingRad: number,
+): Float64Array {
+  const moving = new Float64Array(pendingRotationRad.length);
+  for (let plate = 0; plate < pendingRotationRad.length; plate++) {
+    const pending = pendingRotationRad[plate]! + poles.angularSpeedRadPerMyr[plate]! * stepMyr;
+    if (pending < spacingRad) {
+      pendingRotationRad[plate] = pending;
+      continue;
+    }
+    moving[plate] = pending;
+    pendingRotationRad[plate] = 0;
+  }
+  return moving;
+}
+
+function sampleUpstreamInto(
+  sampled: CrustState,
   grid: SphereGrid,
+  crust: CrustState,
   plateOf: Int32Array,
   poles: EulerPoles,
-  stepMyr: number,
+  moving: Float64Array,
   cell: number,
-): number {
+): void {
   const plate = plateOf[cell]!;
-  const angle = -poles.angularSpeedRadPerMyr[plate]! * stepMyr;
-  const rotated = rotateAboutAxis(grid, poles, plate, cell, angle);
-  return nearestWithinTwoRings(grid, cell, rotated);
+  const target = rotateAboutAxis(grid, poles, plate, cell, -moving[plate]!);
+  const source = walkToNearestCell(grid, cell, target);
+  sampled.thicknessM[cell] = crust.thicknessM[source]!;
+  sampled.densityKgM3[cell] = crust.densityKgM3[source]!;
+  sampled.ageMyr[cell] = crust.ageMyr[source]!;
+}
+
+function walkToNearestCell(grid: SphereGrid, from: number, target: UnitVector): number {
+  let best = from;
+  let bestDot = dotWith(grid, from, target);
+  for (;;) {
+    const closer = closerNeighbour(grid, best, target, bestDot);
+    if (closer.cell === best) return best;
+    best = closer.cell;
+    bestDot = closer.dot;
+  }
+}
+
+function closerNeighbour(
+  grid: SphereGrid,
+  cell: number,
+  target: UnitVector,
+  currentDot: number,
+): { cell: number; dot: number } {
+  const base = cell * MAX_NEIGHBOURS;
+  let bestCell = cell;
+  let bestDot = currentDot;
+  for (let slot = 0; slot < grid.neighbourCount[cell]!; slot++) {
+    const other = grid.neighbours[base + slot]!;
+    const dot = dotWith(grid, other, target);
+    if (dot > bestDot) {
+      bestDot = dot;
+      bestCell = other;
+    }
+  }
+  return { cell: bestCell, dot: bestDot };
 }
 
 function rotateAboutAxis(
@@ -35,7 +95,7 @@ function rotateAboutAxis(
   plate: number,
   cell: number,
   angle: number,
-): [number, number, number] {
+): UnitVector {
   const ax = poles.axisX[plate]!;
   const ay = poles.axisY[plate]!;
   const az = poles.axisZ[plate]!;
@@ -52,62 +112,17 @@ function rotateAboutAxis(
   ];
 }
 
-function nearestWithinTwoRings(
-  grid: SphereGrid,
-  cell: number,
-  target: [number, number, number],
-): number {
-  let best = cell;
-  let bestDot = dotWith(grid, cell, target);
-  for (const candidate of twoRingOf(grid, cell)) {
-    const dot = dotWith(grid, candidate, target);
-    if (dot > bestDot) {
-      bestDot = dot;
-      best = candidate;
-    }
-  }
-  return best;
-}
-
-function twoRingOf(grid: SphereGrid, cell: number): number[] {
-  const ring: number[] = [];
-  for (const first of neighboursOf(grid, cell)) {
-    ring.push(first);
-    for (const second of neighboursOf(grid, first)) if (!ring.includes(second)) ring.push(second);
-  }
-  return ring;
-}
-
-function neighboursOf(grid: SphereGrid, cell: number): number[] {
-  const base = cell * MAX_NEIGHBOURS;
-  const found: number[] = [];
-  for (let slot = 0; slot < grid.neighbourCount[cell]!; slot++) found.push(grid.neighbours[base + slot]!);
-  return found;
-}
-
-function dotWith(grid: SphereGrid, cell: number, target: [number, number, number]): number {
+function dotWith(grid: SphereGrid, cell: number, target: UnitVector): number {
   return grid.positionX[cell]! * target[0]
     + grid.positionY[cell]! * target[1]
     + grid.positionZ[cell]! * target[2];
 }
 
-function crustSampledFrom(grid: SphereGrid, crust: CrustState, source: Int32Array): CrustState {
+function emptyCrust(grid: SphereGrid): CrustState {
   return {
-    thicknessM: sampledFloats(crust.thicknessM, source),
-    densityKgM3: sampledFloats(crust.densityKgM3, source),
-    ageMyr: sampledFloats(crust.ageMyr, source),
+    thicknessM: new Float64Array(grid.cellCount),
+    densityKgM3: new Float64Array(grid.cellCount),
+    ageMyr: new Float64Array(grid.cellCount),
     elevationM: new Float64Array(grid.cellCount),
   };
-}
-
-function sampledFloats(values: Float64Array, source: Int32Array): Float64Array {
-  const sampled = new Float64Array(source.length);
-  for (let cell = 0; cell < source.length; cell++) sampled[cell] = values[source[cell]!]!;
-  return sampled;
-}
-
-function sampledInts(values: Int32Array, source: Int32Array): Int32Array {
-  const sampled = new Int32Array(source.length);
-  for (let cell = 0; cell < source.length; cell++) sampled[cell] = values[source[cell]!]!;
-  return sampled;
 }

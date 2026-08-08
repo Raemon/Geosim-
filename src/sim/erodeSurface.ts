@@ -3,6 +3,7 @@ import { greenhouseWarmingK, partialPressureBar } from '../climate/greenhouse';
 import { stellarFluxWM2 } from '../climate/insolation';
 import { precipitationMPerMyr } from '../climate/orographicPrecipitation';
 import { surfaceTemperatureK } from '../climate/surfaceTemperature';
+import { meanCellSpacingM } from '../sphere/cellSpacing';
 import { routeFlow } from '../surface/flowRouting';
 import { hillslopeChangeM } from '../surface/hillslopeDiffusion';
 import { routeSedimentDownstream } from '../surface/sedimentTransport';
@@ -71,7 +72,7 @@ function erodeAndDeposit(
   stepMyr: number,
 ): SurfaceCycleResult {
   const areas = cellAreasM2(surface);
-  const spacing = meanCellSpacingM(surface);
+  const spacing = meanCellSpacingM(surface.grid, surface.planetRadiusM);
   const network = routeFlow(
     surface.grid, surface.crust.elevationM, precipitation, areas, surface.seaLevelM,
   );
@@ -134,6 +135,4 @@ function cellAreasM2(surface: PlanetSurface): Float64Array {
   return areas;
 }
 
-function meanCellSpacingM(surface: PlanetSurface): number {
-  return surface.planetRadiusM * Math.sqrt((4 * Math.PI) / surface.grid.cellCount);
-}
+

@@ -1,3 +1,4 @@
+import { blendedToward, fractionOfCellReworked } from '../sphere/cellSpacing';
 import { MAX_NEIGHBOURS, type SphereGrid } from '../sphere/sphereGrid';
 import { CONVERGENT, type PlateBoundaries } from './boundaryClassification';
 import {
@@ -8,9 +9,8 @@ import {
   type CrustState,
 } from './crustState';
 
-const ARC_ACCRETION_EFFICIENCY = 0.04;
-const FELSIFICATION_PER_MYR = 20;
-const MAXIMUM_CRUST_THICKNESS_M = 40000;
+const ARC_THICKENING_TARGET_M = 40000;
+const FELSIFICATION_EFFICIENCY = 1;
 
 export function subductAndBuildArcs(
   grid: SphereGrid,
@@ -19,11 +19,15 @@ export function subductAndBuildArcs(
   plateOf: Int32Array,
   stepMyr: number,
   mantleVigour: number,
+  cellSpacingM: number,
 ): void {
   for (let cell = 0; cell < grid.cellCount; cell++) {
     if (boundaries.kind[cell] !== CONVERGENT) continue;
-    if (subductsBeneathNeighbour(grid, crust, plateOf, cell)) recycleAsFreshOcean(crust, cell);
-    else growArcCrust(crust, boundaries, cell, stepMyr, mantleVigour);
+    const reworked = fractionOfCellReworked(
+      boundaries.closingRateMPerMyr[cell]!, stepMyr, cellSpacingM,
+    );
+    if (subductsBeneathNeighbour(grid, crust, plateOf, cell)) recycleAsFreshOcean(crust, cell, reworked);
+    else growArcCrust(crust, cell, reworked * mantleVigour);
   }
 }
 
@@ -48,24 +52,17 @@ function outranksForSubduction(crust: CrustState, overriding: number, subducting
   return crust.ageMyr[subducting]! > crust.ageMyr[overriding]!;
 }
 
-function recycleAsFreshOcean(crust: CrustState, cell: number): void {
-  crust.thicknessM[cell] = OCEANIC_CRUST_THICKNESS_M;
-  crust.densityKgM3[cell] = OCEANIC_CRUST_DENSITY;
-  crust.ageMyr[cell] = 0;
+function recycleAsFreshOcean(crust: CrustState, cell: number, reworked: number): void {
+  crust.thicknessM[cell] = blendedToward(crust.thicknessM[cell]!, OCEANIC_CRUST_THICKNESS_M, reworked);
+  crust.densityKgM3[cell] = blendedToward(crust.densityKgM3[cell]!, OCEANIC_CRUST_DENSITY, reworked);
+  crust.ageMyr[cell] = blendedToward(crust.ageMyr[cell]!, 0, reworked);
 }
 
-function growArcCrust(
-  crust: CrustState,
-  boundaries: PlateBoundaries,
-  cell: number,
-  stepMyr: number,
-  mantleVigour: number,
-): void {
-  const added = Math.abs(boundaries.closingRateMPerMyr[cell]!)
-    * ARC_ACCRETION_EFFICIENCY * stepMyr * mantleVigour;
-  crust.thicknessM[cell] = Math.min(MAXIMUM_CRUST_THICKNESS_M, crust.thicknessM[cell]! + added);
-  crust.densityKgM3[cell] = Math.max(
+function growArcCrust(crust: CrustState, cell: number, reworked: number): void {
+  crust.thicknessM[cell] = blendedToward(crust.thicknessM[cell]!, ARC_THICKENING_TARGET_M, reworked);
+  crust.densityKgM3[cell] = blendedToward(
+    crust.densityKgM3[cell]!,
     CONTINENTAL_CRUST_DENSITY,
-    crust.densityKgM3[cell]! - FELSIFICATION_PER_MYR * stepMyr * mantleVigour,
+    Math.min(1, reworked * FELSIFICATION_EFFICIENCY),
   );
 }

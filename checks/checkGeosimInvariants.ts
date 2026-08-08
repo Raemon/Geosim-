@@ -4,3 +4,4 @@ import './checkAccretion';
 import './checkDifferentiation';
 import './checkPlanetSurface';
 import './checkClimateAndErosion';
+import './checkResolutionConvergence';
