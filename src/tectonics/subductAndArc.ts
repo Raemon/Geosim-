@@ -10,7 +10,7 @@ import {
 
 const ARC_ACCRETION_EFFICIENCY = 0.04;
 const FELSIFICATION_PER_MYR = 20;
-const MAXIMUM_CRUST_THICKNESS_M = 70000;
+const MAXIMUM_CRUST_THICKNESS_M = 40000;
 
 export function subductAndBuildArcs(
   grid: SphereGrid,

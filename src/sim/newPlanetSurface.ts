@@ -14,6 +14,7 @@ export function newPlanetSurface(
   planet: RockyPlanet,
   seed: number,
   subdivisions: number,
+  luminositySolar = 1,
 ): PlanetSurface {
   const random = streamFor(seed, 'plates');
   const grid = sphereGrid(subdivisions);
@@ -28,6 +29,10 @@ export function newPlanetSurface(
     poles: randomEulerPoles(plateCount, random),
     planetRadiusM: planet.radiusM,
     waterMassKg: planet.volatiles.waterMassKg,
+    carbonDioxideMassKg: planet.volatiles.carbonDioxideMassKg,
+    luminositySolar,
+    semiMajorAxisAu: planet.semiMajorAxisAu,
+    surfaceGravityMS2: planet.surfaceGravityMS2,
     mantleVigourAt: (ageMyr) => planet.radiogenicHeatWattsAt(ageMyr) / planet.radiogenicHeatWattsAt(0),
     ageMyr: 0,
     seaLevelM: seaLevelForWaterVolume(grid, crust, planet.volatiles.waterMassKg, planet.radiusM),

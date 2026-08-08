@@ -7,6 +7,7 @@ import { isContinental } from '../src/tectonics/crustState';
 import { EARTH_MASS_KG, EARTH_OCEAN_MASS_KG } from '../src/units/constants';
 import { categoricalColor, hypsometricColor, sequentialColor } from '../src/view/colorRamps';
 import { equirectangularMap } from '../src/view/equirectangularMap';
+import { runSurfaceCycle } from '../src/sim/erodeSurface';
 import { pngBuffer } from './writePng';
 
 const OUTPUT_DIRECTORY = 'frames';
@@ -20,6 +21,18 @@ const LAYERS = {
   plates: (surface: PlanetSurface) => (cell: number) => categoricalColor(surface.plateOf[cell]!),
   crustAge: (surface: PlanetSurface) => (cell: number) =>
     sequentialColor(1 - Math.min(1, surface.crust.ageMyr[cell]! / 200)),
+  temperature: (surface: PlanetSurface) => {
+    const climate = runSurfaceCycle(surface, 0);
+    return (cell: number) => sequentialColor((climate.temperatureK[cell]! - 220) / 130);
+  },
+  rainfall: (surface: PlanetSurface) => {
+    const climate = runSurfaceCycle(surface, 0);
+    return (cell: number) => sequentialColor(climate.precipitationMPerMyr[cell]! / 6e5);
+  },
+  discharge: (surface: PlanetSurface) => {
+    const climate = runSurfaceCycle(surface, 0);
+    return (cell: number) => sequentialColor(Math.log10(1 + climate.dischargeM3PerMyr[cell]!) / 16);
+  },
 } as const;
 
 main();

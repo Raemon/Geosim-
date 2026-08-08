@@ -1,3 +1,4 @@
+import { runSurfaceCycle } from './erodeSurface';
 import { accreteAtRidges } from '../tectonics/accreteAtRidges';
 import { advectPlates } from '../tectonics/advectPlates';
 import { classifyBoundaries } from '../tectonics/boundaryClassification';
@@ -20,6 +21,10 @@ export interface PlanetSurface {
   poles: EulerPoles;
   planetRadiusM: number;
   waterMassKg: number;
+  carbonDioxideMassKg: number;
+  luminositySolar: number;
+  semiMajorAxisAu: number;
+  surfaceGravityMS2: number;
   mantleVigourAt: (ageMyr: number) => number;
   ageMyr: number;
   seaLevelM: number;
@@ -34,7 +39,10 @@ export function stepPlanet(surface: PlanetSurface): PlanetSurface {
   reworkCrustAtBoundaries(next);
   ageCrust(next);
   const aged = surface.ageMyr + STEP_MYR;
-  return withElevationAndSeaLevel(reorganisedIfDue(next, aged), aged);
+  const standing = withElevationAndSeaLevel(next, aged);
+  const cycled = runSurfaceCycle(standing, STEP_MYR);
+  const weathered = { ...standing, carbonDioxideMassKg: cycled.carbonDioxideMassKg };
+  return withElevationAndSeaLevel(reorganisedIfDue(weathered, aged), aged);
 }
 
 function reorganisedIfDue(surface: PlanetSurface, ageMyr: number): PlanetSurface {

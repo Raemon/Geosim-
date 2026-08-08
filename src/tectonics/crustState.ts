@@ -9,8 +9,8 @@ export interface CrustState {
 
 export const OCEANIC_CRUST_THICKNESS_M = 7000;
 export const OCEANIC_CRUST_DENSITY = 2900;
-export const CONTINENTAL_CRUST_DENSITY = 2750;
-export const CONTINENTAL_DENSITY_THRESHOLD = 2830;
+export const CONTINENTAL_CRUST_DENSITY = 2835;
+export const CONTINENTAL_DENSITY_THRESHOLD = 2865;
 
 export function freshBasalticCrust(grid: SphereGrid): CrustState {
   return {
