@@ -1,0 +1,32 @@
+<meta charset="utf-8">
+<title>geosim</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: #0b0e14;
+    color: #cfd6e4;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .viewer { display: flex; gap: 20px; padding: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .viewer canvas { background: #05070c; border: 1px solid #1e2634; border-radius: 4px; touch-action: none; }
+  .panel { display: flex; flex-direction: column; gap: 14px; min-width: 260px; }
+  .panel fieldset { border: 1px solid #1e2634; border-radius: 4px; margin: 0; padding: 10px 12px; }
+  .panel legend { color: #7d8aa3; padding: 0 4px; }
+  .panel label { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .panel button, .panel select, .panel input {
+    background: #141a26;
+    color: #cfd6e4;
+    border: 1px solid #2a3444;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font: inherit;
+  }
+  .panel button { cursor: pointer; }
+  .panel button:hover { background: #1d2635; }
+  .buttons { display: flex; gap: 8px; }
+  .buttons button { flex: 1; }
+  .readout { display: grid; grid-template-columns: auto auto; gap: 2px 14px; }
+  .readout span:nth-child(even) { text-align: right; color: #f0e6c8; }
+</style>
+<script type="module" src="/src/main.ts"></script>

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { rockyPlanetFrom, type RockyPlanet } from '../src/planet/planetBody';
-import { formSystem } from '../src/sim/formSystem';
+import type { RockyPlanet } from '../src/planet/planetBody';
+import { earthlikePlanetForSeed } from '../src/sim/earthlikePlanetForSeed';
 import { newPlanetSurface } from '../src/sim/newPlanetSurface';
 import { stepPlanet, STEP_MYR, type PlanetSurface } from '../src/sim/stepPlanet';
 import { isContinental } from '../src/tectonics/crustState';
@@ -39,7 +39,7 @@ main();
 
 function main(): void {
   const seed = numberArgument('--seed', 1);
-  const planet = wateredEarthMassPlanet(seed);
+  const planet = earthlikePlanetForSeed(seed);
   mkdirSync(OUTPUT_DIRECTORY, { recursive: true });
   reportPlanet(planet);
   renderRun(planet, seed);
@@ -85,20 +85,6 @@ function reportSurface(surface: PlanetSurface): void {
     + `ocean ${(submerged * 100).toFixed(1)}%  `
     + `sea level ${surface.seaLevelM.toFixed(0)} m\n`,
   );
-}
-
-function wateredEarthMassPlanet(seed: number): RockyPlanet {
-  const candidates = Array.from({ length: 40 }, (_ignored, index) => seed + index)
-    .flatMap((candidateSeed) => {
-      const system = formSystem(candidateSeed);
-      return system.planets
-        .filter((planet) => planet.kind === 'rocky' && planet.semiMajorAxisAu < system.snowLineAu)
-        .map(rockyPlanetFrom)
-        .filter((planet) => planet.volatiles.waterMassKg > 0);
-    });
-  return candidates.sort(
-    (a, b) => Math.abs(a.massKg - EARTH_MASS_KG) - Math.abs(b.massKg - EARTH_MASS_KG),
-  )[0]!;
 }
 
 function numberArgument(flag: string, fallback: number): number {
