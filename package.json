@@ -1,0 +1,22 @@
+{
+  "name": "geosim",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "check": "esbuild checks/checkGeosimInvariants.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/checks.mjs && node --test-reporter=spec dist/checks.mjs",
+    "frames": "esbuild tools/renderFrames.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/renderFrames.mjs && node dist/renderFrames.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "esbuild": "0.21.5",
+    "typescript": "5.9.3",
+    "vite": "5.4.21"
+  }
+}
